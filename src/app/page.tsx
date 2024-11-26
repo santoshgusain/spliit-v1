@@ -26,6 +26,9 @@ export default function HomePage() {
             <Button asChild>
               <Link href="/groups">{t('Homepage.button.groups')}</Link>
             </Button>
+            <Button asChild>
+              <Link href="/exp">{'Experience'}</Link>
+            </Button>
           </div>
         </div>
       </section>
