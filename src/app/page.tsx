@@ -29,6 +29,9 @@ export default function HomePage() {
             <Button asChild>
               <Link href="/exp">{'Experience'}</Link>
             </Button>
+            <Button asChild>
+              <Link href="/datediff">{'Date Difference'}</Link>
+            </Button>
           </div>
         </div>
       </section>
