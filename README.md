@@ -107,3 +107,10 @@ OPENAI_API_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## License
 
 MIT, see [LICENSE](./LICENSE).
+
+
+Updateing prisma schema Commands
+npx prisma db push --schema=./prisma/mongodb/schema.prisma
+npx prisma generate --schema=./prisma/mongodb/schema.prisma
+
+update ip address in access setting in mongodb and check if cluster is up and running

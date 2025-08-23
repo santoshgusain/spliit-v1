@@ -1,6 +1,11 @@
+import { PrismaClient as MongoClient } from '.prisma/mongodb'
 import { PrismaClient } from '@prisma/client'
 
-declare const global: Global & { prisma?: PrismaClient }
+declare const global: Global & {
+  prisma?: PrismaClient
+  mongoPrisma?: MongoClient
+}
+// declare const global: Global & { prisma?: PrismaClient }
 
 export let p: PrismaClient = undefined as any as PrismaClient
 
@@ -19,3 +24,15 @@ if (typeof window === 'undefined') {
 }
 
 export const prisma = p
+
+export const mongoPrisma =
+  global.mongoPrisma ||
+  new MongoClient({
+    log:
+      process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn'] : [],
+  })
+
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma
+  global.mongoPrisma = mongoPrisma
+}

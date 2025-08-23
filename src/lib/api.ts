@@ -1,7 +1,71 @@
-import { prisma } from '@/lib/prisma'
+import { mongoPrisma, prisma } from '@/lib/prisma'
 import { ExpenseFormValues, GroupFormValues } from '@/lib/schemas'
 import { ActivityType, Expense } from '@prisma/client'
 import { nanoid } from 'nanoid'
+
+// mongodb code start
+// Create a new user
+export async function mongoCreateExperience(data: any) {
+  console.log({ data }, 'mongodb create called------')
+  const user = await mongoPrisma.experience.create({ data })
+  return user
+}
+
+export async function mongoListExperience() {
+  const user = await mongoPrisma.experience.findMany()
+  return user
+}
+
+// Get a user by ID
+export async function mongoGetUserById(userId: string) {
+  const user = await mongoPrisma.user.findMany({
+    where: {
+      userId: userId,
+    },
+  })
+  return user
+}
+
+// Get all users
+export async function mongoGetAll() {
+  const users = await mongoPrisma.experience.findMany()
+  return users
+}
+
+// Get a user by ID
+export async function mongoGetById(userId: string) {
+  const user = await mongoPrisma.experience.findMany({
+    where: {
+      userId: userId,
+    },
+  })
+  return user
+}
+
+// // Update a user by ID
+// export async function mongoUpdate(
+//   userId: string,
+//   data: { name?: string; email?: string },
+// ) {
+//   const updatedUser = await mongoPrisma.experience.update({
+//     where: {
+//       id: userId,
+//     },
+//     data,
+//   })
+//   return updatedUser
+// }
+
+// // Delete a user by ID
+// export async function mongoDelete(userId: string) {
+//   const deletedUser = await mongoPrisma.experience.delete({
+//     where: {
+//       id: userId,
+//     },
+//   })
+//   return deletedUser
+// }
+// mongodb code end
 
 export function randomId() {
   return nanoid()

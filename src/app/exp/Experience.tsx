@@ -1,5 +1,6 @@
 'use client'
 
+import { SubmitButton } from '@/components/submit-button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Form,
@@ -10,16 +11,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-
-// import {
-//   FormControl,
-//   FormDescription,
-//   FormField,
-//   FormItem,
-//   FormLabel,
-//   FormMessage,
-// } from '@/components/ui/form'
-import { SubmitButton } from '@/components/submit-button'
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -29,14 +20,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useToast } from '@/components/ui/use-toast'
+import { trpc } from '@/trpc/client'
 import { Save } from 'lucide-react'
-
 import { useForm } from 'react-hook-form'
 
 function getExp(experience: any) {
+  if (!experience.length)
+    return {
+      days: 0,
+      years: 0,
+      months: 0,
+      experiences: [],
+    }
+
   let totalDays = 0
 
-  experience.map((row: any) => {
+  experience?.map((row: any) => {
     const fromDate: any = new Date(row.joining)
     const toDate: any = row.isWorking ? new Date() : new Date(row.leaving)
 
@@ -65,22 +65,34 @@ function getExp(experience: any) {
     experiences: experience,
   }
 }
-function getAge() {
-  const fromDate: any = new Date('03-07-1998')
-  const toDate: any = new Date()
 
-  const days = Math.ceil((toDate - fromDate) / 1000 / 60 / 60 / 24)
+function getAge(inputDob: string) {
+  const dobString = inputDob ?? '1992-07-03'
+  const [year, month, day] = dobString.split('-').map(Number)
+  const dob = new Date(year, month - 1, day)
+  const today = new Date()
 
-  const totalDays = days
+  let years = today.getFullYear() - dob.getFullYear()
+  let months = today.getMonth() - dob.getMonth()
+  let days = today.getDate() - dob.getDate()
 
-  const years = Math.floor(totalDays / 365)
+  // Adjust for negative months
+  if (months < 0 || (months === 0 && days < 0)) {
+    years--
+    months += 12
+  }
 
-  let months = Math.floor(Math.abs(years - totalDays / 365) * 12)
+  // Adjust for negative days
+  if (days < 0) {
+    const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
+    days += lastMonth.getDate()
+    months--
+  }
 
   return {
-    days: totalDays,
-    years,
-    months,
+    years: years,
+    months: months,
+    days: days,
   }
 }
 
@@ -102,49 +114,29 @@ function daysBetween(startDate: any, endDate: any) {
 }
 
 export default function Experience() {
+  const toast = useToast()
+  const { mutateAsync } = trpc.experience.create.useMutation()
+  const { data: experienceData, isLoading } = trpc.experience.list.useQuery()
+  const { data: userData } = trpc.user.fetch.useQuery({
+    userId: 'santoshgusain',
+  })
+
+  console.log({ experienceData, userData, isLoading }, '------>>>>')
+
   const form = useForm({
     // resolver: zodResolver(expenseFormSchema),
     defaultValues: {
-      title: '',
-      startDate: undefined,
-      // startDate: new Date(),
+      company: '',
+      startDate: new Date(),
       endDate: new Date(),
       isCurrent: false,
     },
   })
 
-  const experience = [
-    {
-      company: 'gspann',
-      totalWorkingDays: 100,
-      joining: '2023-11-14',
-      leaving: '',
-      isWorking: true,
-    },
-    {
-      company: 'mobcoder',
-      totalWorkingDays: 100,
-      joining: '2023-01-19',
-      leaving: '2023-10-20',
-      isWorking: false,
-    },
-    {
-      company: 'mansa infotech',
-      totalWorkingDays: 100,
-      joining: '2021-08-02',
-      leaving: '2023-01-05',
-      isWorking: false,
-    },
-    {
-      company: 'Prolofic Technologies',
-      totalWorkingDays: 100,
-      joining: '2020-02-03',
-      leaving: '2021-06-29',
-      isWorking: false,
-    },
-  ]
-  const { days, months, years, experiences } = getExp(experience)
-  const age = getAge()
+  const { months, years, experiences } = getExp(
+    isLoading ? [] : experienceData?.experiences,
+  )
+  const age = getAge((userData as any)?.user[0].dob)
 
   return (
     <>
@@ -155,7 +147,7 @@ export default function Experience() {
           </h1>
           <div className="flex gap-2">
             <div>
-              {age?.years} years {age?.months} months
+              {age?.years} years {age?.months} months {age?.days} days
             </div>
           </div>
         </div>
@@ -208,25 +200,50 @@ export default function Experience() {
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(async (values: any) => {
-                console.log('values', values)
-                // await persistDefaultSplittingOptions(group.id, values)
-                // return onSubmit(values,  undefined)
+                // formatDate
+                const joining = formatDate(values.startDate)?.toString()
+                const leaving = formatDate(values.endDate)?.toString()
+
+                const payload = {
+                  userId: 'santoshgusain',
+                  company: values.company,
+                  totalWorkingDays: daysBetween(
+                    values.startDate,
+                    values.endDate,
+                  ),
+                  joining,
+                  leaving,
+                  isWorking: values.isCurrent,
+                }
+
+                console.log('values', { values, payload })
+
+                mutateAsync({
+                  expFormValues: payload,
+                })
+
+                toast.toast({
+                  title: 'Success',
+                  description: 'Experience saved successfully',
+                })
               })}
             >
               <FormField
                 control={form.control}
-                name="title"
+                name="company"
                 render={({ field }) => (
                   <FormItem className="">
-                    <FormLabel>{'Title label'}</FormLabel>
+                    <FormLabel>{'Company'}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder={'Enter title'}
+                        placeholder={'Enter Company Name'}
                         className="text-base"
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>{'Title decription'}</FormDescription>
+                    <FormDescription>
+                      {'Company/Organisation name'}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -249,7 +266,7 @@ export default function Experience() {
                       />
                     </FormControl>
                     <FormDescription>
-                      {'Start date description'}
+                      {'Joining date of the employ'}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -272,7 +289,9 @@ export default function Experience() {
                         }}
                       />
                     </FormControl>
-                    <FormDescription>{'End date description'}</FormDescription>
+                    <FormDescription>
+                      {'Releaving date of the employ'}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

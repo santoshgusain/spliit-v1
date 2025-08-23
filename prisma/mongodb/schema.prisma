@@ -1,0 +1,30 @@
+// filepath: /home/santoshgusain/Desktop/practice/split/prisma/mongodb/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/mongodb"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_DATABASE_URL")
+}
+
+model Experience {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String
+  company String
+  totalWorkingDays Int
+  joining String
+  leaving String
+  isWorking Boolean
+}
+
+model User {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String
+  firstName String
+  lastName String
+  dob String
+  email String
+  phoneNumber String
+}
