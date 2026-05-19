@@ -1,5 +1,5 @@
 'use server'
-import { getCategories } from '@/lib/api'
+import { mongoGetCategories } from '@/lib/mongo-api'
 import { env } from '@/lib/env'
 import { formatCategoryForAIPrompt } from '@/lib/utils'
 import OpenAI from 'openai'
@@ -16,7 +16,7 @@ const limit = 40 // ~10 tokens
  */
 export async function extractCategoryFromTitle(description: string) {
   'use server'
-  const categories = await getCategories()
+  const categories = await mongoGetCategories()
 
   const body: ChatCompletionCreateParamsNonStreaming = {
     model: 'gpt-3.5-turbo',
@@ -46,10 +46,10 @@ export async function extractCategoryFromTitle(description: string) {
   const messageContent = completion.choices.at(0)?.message.content
   // ensure the returned id actually exists
   const category = categories.find((category) => {
-    return category.id === Number(messageContent)
+    return category.id === messageContent
   })
   // fall back to first category (should be "General") if no category matches the output
-  return { categoryId: category?.id || 0 }
+  return { categoryId: category?.id || categories[0]?.id || '' }
 }
 
 export type TitleExtractedInfo = Awaited<

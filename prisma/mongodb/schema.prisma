@@ -1,7 +1,7 @@
-// filepath: /home/santoshgusain/Desktop/practice/split/prisma/mongodb/schema.prisma
+// MongoDB schema optimized for document model
 generator client {
   provider = "prisma-client-js"
-  output   = "../../node_modules/.prisma/mongodb"
+  output   = "../../node_modules/.prisma/mongodb-client"
 }
 
 datasource db {
@@ -10,21 +10,53 @@ datasource db {
 }
 
 model Experience {
-  id    String @id @default(auto()) @map("_id") @db.ObjectId
-  userId String
-  company String
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String
+  company         String
   totalWorkingDays Int
-  joining String
-  leaving String
-  isWorking Boolean
+  joining         String
+  leaving         String
+  isWorking       Boolean
 }
 
 model User {
-  id    String @id @default(auto()) @map("_id") @db.ObjectId
-  userId String
-  firstName String
-  lastName String
-  dob String
-  email String
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String
+  firstName   String
+  lastName    String
+  dob         String
+  email       String
   phoneNumber String
+}
+
+model Group {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  information  String?
+  currency     String   @default("$")
+  participants Json[]   @default([]) // Embedded array of participants
+  expenses     Json[]   @default([]) // Embedded array of expenses with their details
+  activities   Json[]   @default([]) // Embedded array of activities
+  createdAt    DateTime @default(now())
+}
+
+model Category {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  grouping String
+  name     String
+}
+
+// Enums remain the same
+enum SplitMode {
+  EVENLY
+  BY_SHARES
+  BY_PERCENTAGE
+  BY_AMOUNT
+}
+
+enum ActivityType {
+  UPDATE_GROUP
+  CREATE_EXPENSE
+  UPDATE_EXPENSE
+  DELETE_EXPENSE
 }

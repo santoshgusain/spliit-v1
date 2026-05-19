@@ -27,6 +27,9 @@ const nextConfig = {
   images: {
     remotePatterns
   },
+  experimental: {
+    serverComponentsExternalPackages: ['prisma', '@prisma/client'],
+  },
   // Required to run in a codespace (see https://github.com/vercel/next.js/issues/58019)
   experimental: {
     serverActions: {

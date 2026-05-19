@@ -66,10 +66,11 @@ const enforceCurrencyPattern = (value: string) =>
 const getDefaultSplittingOptions = (
   group: NonNullable<AppRouterOutput['groups']['get']['group']>,
 ) => {
+  const participants = group.participants as any[]
   const defaultValue = {
     splitMode: 'EVENLY' as const,
-    paidFor: group.participants.map(({ id }) => ({
-      participant: id,
+    paidFor: participants.map((p: any) => ({
+      participant: p.id,
       shares: '1' as unknown as number,
     })),
   }
@@ -91,7 +92,7 @@ const getDefaultSplittingOptions = (
   // remove the stale default splitting options
   for (const parsedPaidFor of parsedDefaultSplitMode.paidFor) {
     if (
-      !group.participants.some(({ id }) => id === parsedPaidFor.participant)
+      !participants.some((p: any) => p.id === parsedPaidFor.participant)
     ) {
       localStorage.removeItem(`${group.id}-defaultSplittingOptions`)
       return defaultValue
@@ -175,9 +176,9 @@ export function ExpenseForm({
           amount: String(expense.amount / 100) as unknown as number, // hack
           category: expense.categoryId,
           paidBy: expense.paidById,
-          paidFor: expense.paidFor.map(({ participantId, shares }) => ({
-            participant: participantId,
-            shares: String(shares / 100) as unknown as number,
+          paidFor: expense.paidFor.map((paidForItem: any) => ({
+            participant: paidForItem.participantId,
+            shares: String(paidForItem.shares / 100) as unknown as number,
           })),
           splitMode: expense.splitMode,
           saveDefaultSplittingOptions: false,
@@ -337,7 +338,7 @@ export function ExpenseForm({
                           const { categoryId } = await extractCategoryFromTitle(
                             field.value,
                           )
-                          form.setValue('category', categoryId)
+                          form.setValue('category', Number(categoryId))
                           setCategoryLoading(false)
                         }
                       }}
@@ -439,7 +440,10 @@ export function ExpenseForm({
                 <FormItem className="order-3 sm:order-2">
                   <FormLabel>{t('categoryField.label')}</FormLabel>
                   <CategorySelector
-                    categories={categories}
+                    categories={categories.map((cat: any) => ({
+                      ...cat,
+                      id: parseInt(cat.id),
+                    }))}
                     defaultValue={
                       form.watch(field.name) // may be overwritten externally
                     }
@@ -468,9 +472,9 @@ export function ExpenseForm({
                       <SelectValue placeholder="Select a participant" />
                     </SelectTrigger>
                     <SelectContent>
-                      {group.participants.map(({ id, name }) => (
-                        <SelectItem key={id} value={id}>
-                          {name}
+                      {(group.participants as any[]).map((participant: any) => (
+                        <SelectItem key={participant.id} value={participant.id}>
+                          {participant.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -507,14 +511,15 @@ export function ExpenseForm({
                 className="-my-2 -mx-4"
                 onClick={() => {
                   const paidFor = form.getValues().paidFor
+                  const participants = group.participants as any[]
                   const allSelected =
-                    paidFor.length === group.participants.length
+                    paidFor.length === participants.length
                   const newPaidFor = allSelected
                     ? []
-                    : group.participants.map((p) => ({
-                        participant: p.id,
+                    : participants.map((p: any) => ({
+                        participant: p?.id,
                         shares:
-                          paidFor.find((pfor) => pfor.participant === p.id)
+                          paidFor.find((pfor) => pfor.participant === p?.id)
                             ?.shares ?? ('1' as unknown as number),
                       }))
                   form.setValue('paidFor', newPaidFor, {
@@ -542,15 +547,15 @@ export function ExpenseForm({
               name="paidFor"
               render={() => (
                 <FormItem className="sm:order-4 row-span-2 space-y-0">
-                  {group.participants.map(({ id, name }) => (
+                  {(group.participants as any[]).map((participant: any) => (
                     <FormField
-                      key={id}
+                      key={participant.id}
                       control={form.control}
                       name="paidFor"
                       render={({ field }) => {
                         return (
                           <div
-                            data-id={`${id}/${form.getValues().splitMode}/${
+                            data-id={`${participant.id}/${form.getValues().splitMode}/${
                               group.currency
                             }`}
                             className="flex items-center border-t last-of-type:border-b last-of-type:!mb-4 -mx-6 px-6 py-3"
@@ -559,7 +564,7 @@ export function ExpenseForm({
                               <FormControl>
                                 <Checkbox
                                   checked={field.value?.some(
-                                    ({ participant }) => participant === id,
+                                    ({ participant }) => participant === participant.id,
                                   )}
                                   onCheckedChange={(checked) => {
                                     const options = {
@@ -573,7 +578,7 @@ export function ExpenseForm({
                                           [
                                             ...field.value,
                                             {
-                                              participant: id,
+                                              participant: participant.id,
                                               shares: '1' as unknown as number,
                                             },
                                           ],
@@ -582,7 +587,7 @@ export function ExpenseForm({
                                       : form.setValue(
                                           'paidFor',
                                           field.value?.filter(
-                                            (value) => value.participant !== id,
+                                            (value) => value.participant !== participant.id,
                                           ),
                                           options,
                                         )
@@ -590,21 +595,21 @@ export function ExpenseForm({
                                 />
                               </FormControl>
                               <FormLabel className="text-sm font-normal flex-1">
-                                {name}
+                                {participant.name}
                               </FormLabel>
                             </FormItem>
                             {form.getValues().splitMode !== 'EVENLY' && (
                               <FormField
                                 name={`paidFor[${field.value.findIndex(
-                                  ({ participant }) => participant === id,
+                                  ({ participant: p }) => p === participant.id,
                                 )}].shares`}
                                 render={() => {
                                   const sharesLabel = (
                                     <span
                                       className={cn('text-sm', {
                                         'text-muted': !field.value?.some(
-                                          ({ participant }) =>
-                                            participant === id,
+                                          ({ participant: p }) =>
+                                            p === participant.id,
                                         ),
                                       })}
                                     >
@@ -630,30 +635,30 @@ export function ExpenseForm({
                                           <Input
                                             key={String(
                                               !field.value?.some(
-                                                ({ participant }) =>
-                                                  participant === id,
+                                                ({ participant: p }) =>
+                                                  p === participant.id,
                                               ),
                                             )}
                                             className="text-base w-[80px] -my-2"
                                             type="text"
                                             disabled={
                                               !field.value?.some(
-                                                ({ participant }) =>
-                                                  participant === id,
+                                                ({ participant: p }) =>
+                                                  p === participant.id,
                                               )
                                             }
                                             value={
                                               field.value?.find(
-                                                ({ participant }) =>
-                                                  participant === id,
+                                                ({ participant: p }) =>
+                                                  p === participant.id,
                                               )?.shares
                                             }
                                             onChange={(event) => {
                                               field.onChange(
                                                 field.value.map((p) =>
-                                                  p.participant === id
+                                                  p.participant === participant.id
                                                     ? {
-                                                        participant: id,
+                                                        participant: participant.id,
                                                         shares:
                                                           enforceCurrencyPattern(
                                                             event.target.value,
@@ -663,7 +668,7 @@ export function ExpenseForm({
                                                 ),
                                               )
                                               setManuallyEditedParticipants(
-                                                (prev) => new Set(prev).add(id),
+                                                (prev) => new Set(prev).add(participant.id),
                                               )
                                             }}
                                             inputMode={

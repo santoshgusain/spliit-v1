@@ -1,4 +1,4 @@
-import { getGroupExpenses } from '@/lib/api'
+import { mongoGetGroupExpenses } from '@/lib/mongo-api'
 import {
   getBalances,
   getPublicBalances,
@@ -10,7 +10,7 @@ import { z } from 'zod'
 export const listGroupBalancesProcedure = baseProcedure
   .input(z.object({ groupId: z.string().min(1) }))
   .query(async ({ input: { groupId } }) => {
-    const expenses = await getGroupExpenses(groupId)
+    const expenses = await mongoGetGroupExpenses(groupId)
     const balances = getBalances(expenses)
     const reimbursements = getSuggestedReimbursements(balances)
     const publicBalances = getPublicBalances(reimbursements)

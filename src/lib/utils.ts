@@ -24,7 +24,7 @@ export function formatDate(
   })
 }
 
-export function formatCategoryForAIPrompt(category: Category) {
+export function formatCategoryForAIPrompt(category: { id: string; grouping: string; name: string }) {
   return `"${category.grouping}/${category.name}" (ID: ${category.id})`
 }
 

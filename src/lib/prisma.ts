@@ -1,11 +1,10 @@
-import { PrismaClient as MongoClient } from '.prisma/mongodb'
 import { PrismaClient } from '@prisma/client'
+import { PrismaClient as MongoClient } from '../../prisma/mongodb/client'
 
 declare const global: Global & {
   prisma?: PrismaClient
   mongoPrisma?: MongoClient
 }
-// declare const global: Global & { prisma?: PrismaClient }
 
 export let p: PrismaClient = undefined as any as PrismaClient
 

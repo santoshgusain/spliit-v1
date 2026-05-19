@@ -1,4 +1,4 @@
-import { getGroupExpenses } from '@/lib/api'
+import { mongoGetGroupExpenses } from '@/lib/mongo-api'
 import { Participant } from '@prisma/client'
 import { match } from 'ts-pattern'
 
@@ -14,7 +14,7 @@ export type Reimbursement = {
 }
 
 export function getBalances(
-  expenses: NonNullable<Awaited<ReturnType<typeof getGroupExpenses>>>,
+  expenses: NonNullable<Awaited<ReturnType<typeof mongoGetGroupExpenses>>>,
 ): Balances {
   const balances: Balances = {}
 
@@ -36,12 +36,12 @@ export function getBalances(
 
       const isLast = index === paidFors.length - 1
 
-      const [shares, totalShares] = match(expense.splitMode)
+      const [shares, totalShares] = match(expense.splitMode as string)
         .with('EVENLY', () => [1, paidFors.length])
         .with('BY_SHARES', () => [paidFor.shares, totalPaidForShares])
         .with('BY_PERCENTAGE', () => [paidFor.shares, totalPaidForShares])
         .with('BY_AMOUNT', () => [paidFor.shares, totalPaidForShares])
-        .exhaustive()
+        .otherwise(() => [1, paidFors.length]) // Default to EVENLY
 
       const dividedAmount = isLast
         ? remaining

@@ -1,7 +1,7 @@
-import { getGroupExpenses } from '@/lib/api'
+import { mongoGetGroupExpenses } from '@/lib/mongo-api'
 
 export function getTotalGroupSpending(
-  expenses: NonNullable<Awaited<ReturnType<typeof getGroupExpenses>>>,
+  expenses: NonNullable<Awaited<ReturnType<typeof mongoGetGroupExpenses>>>,
 ): number {
   return expenses.reduce(
     (total, expense) =>
@@ -12,7 +12,7 @@ export function getTotalGroupSpending(
 
 export function getTotalActiveUserPaidFor(
   activeUserId: string | null,
-  expenses: NonNullable<Awaited<ReturnType<typeof getGroupExpenses>>>,
+  expenses: NonNullable<Awaited<ReturnType<typeof mongoGetGroupExpenses>>>,
 ): number {
   return expenses.reduce(
     (total, expense) =>
@@ -25,7 +25,7 @@ export function getTotalActiveUserPaidFor(
 
 export function getTotalActiveUserShare(
   activeUserId: string | null,
-  expenses: NonNullable<Awaited<ReturnType<typeof getGroupExpenses>>>,
+  expenses: NonNullable<Awaited<ReturnType<typeof mongoGetGroupExpenses>>>,
 ): number {
   let total = 0
 

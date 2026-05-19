@@ -42,3 +42,38 @@ export function DeletePopup({ onDelete }: { onDelete: () => Promise<void> }) {
     </Dialog>
   )
 }
+
+export function DeletePopupCustom({
+  onDelete,
+}: {
+  onDelete: () => Promise<void>
+}) {
+  const t = useTranslations('ExpenseForm.DeletePopup')
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="destructive">
+          <Trash2 className="w-4 h-4 mr-2" />
+          {t('label')}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogTitle>{t('title')}</DialogTitle>
+        <DialogDescription>{t('description')}</DialogDescription>
+        <DialogFooter className="flex flex-col gap-2">
+          <AsyncButton
+            type="button"
+            variant="destructive"
+            loadingContent="Deleting…"
+            action={onDelete}
+          >
+            {t('yes')}
+          </AsyncButton>
+          <DialogClose asChild>
+            <Button variant={'secondary'}>{t('cancel')}</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

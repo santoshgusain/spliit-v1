@@ -20,7 +20,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { getGroup } from '@/lib/api'
+import { mongoGetGroup } from '@/lib/mongo-api'
 import { GroupFormValues, groupFormSchema } from '@/lib/schemas'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Save } from 'lucide-react'
@@ -30,7 +30,7 @@ import { useEffect, useState } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 
 export type Props = {
-  group?: NonNullable<Awaited<ReturnType<typeof getGroup>>>
+  group?: NonNullable<Awaited<ReturnType<typeof mongoGetGroup>>>
   onSubmit: (
     groupFormValues: GroupFormValues,
     participantId?: string,

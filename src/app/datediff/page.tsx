@@ -1,18 +1,24 @@
+'use client'
+
+import { SubmitButton } from '@/components/submit-button'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Metadata } from 'next'
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Save } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 
-import { GroupForm } from '@/components/datediff-form'
-
-export const metadata: Metadata = {
-  title: 'Recently visited groups',
-}
+// export const metadata: Metadata = {
+//   title: 'Recently visited groups',
+// }
 
 function getExp(experience: any) {
   let totalDays = 0
@@ -64,7 +70,27 @@ function daysBetween(startDate: any, endDate: any) {
   return Math.floor((endDateUTC - startDateUTC) / millisecondsPerDay)
 }
 
-export default async function GroupsPage() {
+function formatDate(date?: Date) {
+  if (!date || isNaN(date as any)) date = new Date()
+  return date.toISOString().substring(0, 10)
+}
+
+const defaultValuesForm = {
+  startDate: new Date(),
+  endDate: new Date(),
+}
+
+export const experienceSchema = z
+  .object({
+    startDate: z.date({
+      required_error: 'Start date is required',
+      invalid_type_error: 'Please select a valid date',
+    }),
+    endDate: z.date().optional().nullable(),
+  })
+  .passthrough()
+
+export default function GroupsPage() {
   const experience = [
     {
       company: 'gspann',
@@ -97,20 +123,81 @@ export default async function GroupsPage() {
   ]
   const { days, months, years, experiences } = getExp(experience)
 
+  const form = useForm({
+    resolver: zodResolver(experienceSchema),
+    defaultValues: defaultValuesForm,
+  })
+
   return (
     <>
       <main className="flex-1 max-w-screen-md w-full mx-auto px-4 py-6 flex flex-col gap-6">
-        <GroupForm
-          group={{
-            participants: [{ id: 'string', name: 'string', groupId: 'string' }],
-          }}
-          // onSubmit={async (groupFormValues, participantId) => {
-          //   await mutateAsync({ groupId, participantId, groupFormValues })
-          //   await utils.groups.invalidate()
-          // }}
-          // protectedParticipantIds={data?.participantsWithExpenses}
-        />
-  
+        <div>
+          <h3>{'Add Experience'}</h3>
+          <br />
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(async (values: any) => {
+                const { editing, id } = values
+                console.log(editing, '=======================')
+              })}
+            >
+              <FormField
+                control={form.control}
+                name="startDate"
+                render={({ field }) => (
+                  <FormItem className="sm:order-1">
+                    <FormLabel>{'Start Date'}</FormLabel>
+                    <FormControl>
+                      <Input
+                        className="date-base"
+                        type="date"
+                        defaultValue={formatDate(field.value)}
+                        onChange={(event) => {
+                          return field.onChange(new Date(event.target.value))
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {'Joining date of the employ'}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="endDate"
+                render={({ field }) => (
+                  <FormItem className="sm:order-1">
+                    <FormLabel>{'End Date'}</FormLabel>
+                    <FormControl>
+                      <Input
+                        className="date-base"
+                        type="date"
+                        defaultValue={formatDate(field.value)}
+                        onChange={(event) => {
+                          return field.onChange(new Date(event.target.value))
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {'Releaving date of the employ'}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex mt-4 gap-2">
+                <SubmitButton loadingContent={'saving'}>
+                  <Save className="w-4 h-4 mr-2" />
+                  {'Save'}
+                </SubmitButton>
+              </div>
+            </form>
+          </Form>
+        </div>
       </main>
     </>
   )

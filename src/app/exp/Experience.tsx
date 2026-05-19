@@ -1,6 +1,7 @@
 'use client'
 
 import { SubmitButton } from '@/components/submit-button'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Form,
@@ -22,11 +23,15 @@ import {
 } from '@/components/ui/table'
 import { useToast } from '@/components/ui/use-toast'
 import { trpc } from '@/trpc/client'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Save } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { DeletePopupCustom } from '../../components/delete-popup'
 
 function getExp(experience: any) {
-  if (!experience.length)
+  if (!experience?.length)
     return {
       days: 0,
       years: 0,
@@ -113,29 +118,103 @@ function daysBetween(startDate: any, endDate: any) {
   return Math.floor((endDateUTC - startDateUTC) / millisecondsPerDay)
 }
 
+const defaultValuesForm = {
+  company: '',
+  startDate: new Date(),
+  endDate: new Date(),
+  isCurrent: true,
+}
+
+export const experienceSchema = z
+  .object({
+    company: z.string().min(1, 'Company name is required'),
+    startDate: z.date({
+      required_error: 'Start date is required',
+      invalid_type_error: 'Please select a valid date',
+    }),
+    // If isCurrent is true, endDate might be null or undefined
+    endDate: z.date().optional().nullable(),
+    isCurrent: z.boolean().default(true),
+  })
+  .passthrough()
+  .refine(
+    (data) => {
+      // If not currently working there, an end date is usually required and must be after start
+      if (!data.isCurrent) {
+        if (!data.endDate) return false
+        return data.endDate >= data.startDate
+      }
+      return true
+    },
+    {
+      message: 'End date must be after the start date',
+      path: ['endDate'],
+    },
+  )
+
+// Extract the TypeScript type from the schema
+// export type ExperienceFormValues = z.infer<typeof experienceSchema>;
+
 export default function Experience() {
   const toast = useToast()
-  const { mutateAsync } = trpc.experience.create.useMutation()
-  const { data: experienceData, isLoading } = trpc.experience.list.useQuery()
+  const utils = trpc.useUtils()
+
+  const form = useForm({
+    resolver: zodResolver(experienceSchema),
+    defaultValues: defaultValuesForm,
+  })
+
+  // This forces the list to refetch the next time it's needed
+  const mutationOption = {
+    onSuccess: () => {
+      utils.experience.list.invalidate()
+    },
+  }
+  // mutateAsync
+  // for add operation
+  const addExp = trpc.experience.create.useMutation(mutationOption)
+  // for delete operation
+  const deleteExp = trpc.experience.delete.useMutation(mutationOption)
+  // for update operation
+  const updateExp = trpc.experience.update.useMutation(mutationOption)
+
+  // const { data: experienceData, isLoading } = trpc.experience.list.useQuery()
   const { data: userData } = trpc.user.fetch.useQuery({
     userId: 'santoshgusain',
   })
 
+  const [experienceData, setExperienceData] = useState([])
+  const [isLoading, setLoading] = useState(false)
+
+  useEffect(() => {
+    getExperienceData()
+    form.reset(defaultValuesForm)
+  }, [])
+
+  const getExperienceData = async () => {
+    setLoading(true)
+    // utils.experience.create.mutate
+    // const result: any = await utils.experience.list.invalidate()
+    const result: any = await utils.experience.list.fetch()
+    console.log({ result }, '---------------------99999')
+    setExperienceData(result.experiences || [])
+    setLoading(false)
+    // experiences
+  }
+
+  const handleReset = (e: any) => {
+    e.preventDefault()
+    form.reset(defaultValuesForm)
+  }
+
   console.log({ experienceData, userData, isLoading }, '------>>>>')
 
-  const form = useForm({
-    // resolver: zodResolver(expenseFormSchema),
-    defaultValues: {
-      company: '',
-      startDate: new Date(),
-      endDate: new Date(),
-      isCurrent: false,
-    },
-  })
-
-  const { months, years, experiences } = getExp(
-    isLoading ? [] : experienceData?.experiences,
-  )
+  const { months, years, experiences } = getExp(experienceData)
+  // const { months, years, experiences } = getExp(isLoading ? [] : experienceData)
+  console.log({ months, years, experiences }, '--------------------123')
+  // const { months, years, experiences } = getExp(
+  //   isLoading ? [] : experienceData?.experiences,
+  // )
   const age = getAge((userData as any)?.user[0].dob)
 
   return (
@@ -164,19 +243,25 @@ export default function Experience() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="text-right">#</TableHead>
               <TableHead className="w-[100px]">Company Name</TableHead>
               <TableHead>Joining Date</TableHead>
               <TableHead>Leaving Date</TableHead>
               <TableHead className="text-right">Total Working Days</TableHead>
               <TableHead className="text-right">Working</TableHead>
+              <TableHead className="text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(experiences as Record<string, any>[]).map(
-              ({ company, joining, leaving, isWorking, totalWorkingDays }) => {
+            {(experienceData as Record<string, any>[]).map(
+              (
+                { company, joining, leaving, isWorking, totalWorkingDays, id },
+                index,
+              ) => {
                 return (
                   <>
                     <TableRow>
+                      <TableCell className="font-medium">{index + 1}</TableCell>
                       <TableCell className="font-medium">{company}</TableCell>
                       <TableCell>{joining}</TableCell>
                       <TableCell>{leaving || '-'}</TableCell>
@@ -185,6 +270,40 @@ export default function Experience() {
                       </TableCell>
                       <TableCell className="text-right">
                         {isWorking ? 'Yes' : 'No'}
+                      </TableCell>
+                      <TableCell className="text-right flex gap-1">
+                        <DeletePopupCustom
+                          onDelete={async () => {
+                            console.log('deleting the record')
+                            await deleteExp.mutateAsync({
+                              expId: id,
+                            })
+                            await getExperienceData()
+                            // utils.groups.expenses.invalidate()
+                            // router.push(`/groups/${group.id}`)
+                          }}
+                        ></DeletePopupCustom>
+                        <Button
+                          onClick={() => {
+                            console.log('edit  button clicked')
+                            const row = {
+                              id,
+                              editing: true,
+                              company,
+                              startDate: new Date(joining),
+                              endDate: new Date(leaving),
+                              isCurrent: isWorking,
+                            }
+                            form.reset(row)
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        {/* <ConfirmationPopup
+                          onDelete={async () => {
+                            console.log('updating the record')
+                          }}
+                        ></ConfirmationPopup> */}
                       </TableCell>
                     </TableRow>
                   </>
@@ -195,11 +314,15 @@ export default function Experience() {
         </Table>
 
         <div>
-          <h3>Add Experience</h3>
-
+          <h3>
+            {form.getValues('editing') ? 'Update Experience' : 'Add Experience'}
+          </h3>
+          <br />
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(async (values: any) => {
+                const { editing, id } = values
+                console.log(editing, '=======================')
                 // formatDate
                 const joining = formatDate(values.startDate)?.toString()
                 const leaving = formatDate(values.endDate)?.toString()
@@ -216,16 +339,32 @@ export default function Experience() {
                   isWorking: values.isCurrent,
                 }
 
-                console.log('values', { values, payload })
+                console.log('values------------=====', { values, payload })
 
-                mutateAsync({
-                  expFormValues: payload,
-                })
+                let response
 
-                toast.toast({
-                  title: 'Success',
-                  description: 'Experience saved successfully',
-                })
+                if (editing) {
+                  response = await updateExp.mutateAsync({
+                    expFormValues: { ...payload, id },
+                  })
+
+                  toast.toast({
+                    title: 'Success',
+                    description: 'Experience updated successfully!',
+                  })
+                } else {
+                  response = await addExp.mutateAsync({
+                    expFormValues: payload,
+                  })
+
+                  toast.toast({
+                    title: 'Success',
+                    description: 'Experience added successfully!',
+                  })
+                }
+
+                console.log(response, 'result=====================')
+                getExperienceData()
               })}
             >
               <FormField
@@ -320,6 +459,9 @@ export default function Experience() {
                   <Save className="w-4 h-4 mr-2" />
                   {'Save'}
                 </SubmitButton>
+                <Button variant={'outline'} onClick={handleReset}>
+                  {'Reset'}
+                </Button>
               </div>
             </form>
           </Form>

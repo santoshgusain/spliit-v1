@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getGroup } from '@/lib/api'
+import { mongoGetGroup } from '@/lib/mongo-api'
 import { GroupFormValues, groupFormSchema } from '@/lib/schemas'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Save, Trash2 } from 'lucide-react'
@@ -41,7 +41,7 @@ import { useFieldArray, useForm } from 'react-hook-form'
 import { Textarea } from './ui/textarea'
 
 export type Props = {
-  group?: NonNullable<Awaited<ReturnType<typeof getGroup>>>
+  group?: NonNullable<Awaited<ReturnType<typeof mongoGetGroup>>>
   onSubmit: (
     groupFormValues: GroupFormValues,
     participantId?: string,
@@ -62,7 +62,10 @@ export function GroupForm({
           name: group.name,
           information: group.information ?? '',
           currency: group.currency,
-          participants: group.participants,
+          participants: (group.participants as any[]).map((p: any) => ({
+            name: p.name,
+            id: p.id,
+          })),
         }
       : {
           name: '',
@@ -95,7 +98,8 @@ export function GroupForm({
   const updateActiveUser = () => {
     if (!activeUser) return
     if (group?.id) {
-      const participant = group.participants.find((p) => p.name === activeUser)
+      const participants = group.participants as any[]
+      const participant = participants.find((p: any) => p?.name === activeUser)
       if (participant?.id) {
         localStorage.setItem(`${group.id}-activeUser`, participant.id)
       } else {
@@ -110,9 +114,10 @@ export function GroupForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(async (values) => {
+          const participants = group?.participants as any[]
           await onSubmit(
             values,
-            group?.participants.find((p) => p.name === activeUser)?.id ??
+            participants?.find((p: any) => p?.name === activeUser)?.id ??
               undefined,
           )
         })}

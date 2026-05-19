@@ -1,4 +1,4 @@
-import { getGroups } from '@/lib/api'
+import { mongoGetGroups } from '@/lib/mongo-api'
 import { baseProcedure } from '@/trpc/init'
 import { z } from 'zod'
 
@@ -9,6 +9,6 @@ export const listGroupsProcedure = baseProcedure
     }),
   )
   .query(async ({ input: { groupIds } }) => {
-    const groups = await getGroups(groupIds)
+    const groups = await mongoGetGroups(groupIds)
     return { groups }
   })

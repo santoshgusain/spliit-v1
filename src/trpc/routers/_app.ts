@@ -1,7 +1,7 @@
-import { categoriesRouter } from '@/trpc/routers/categories'
+import { categoriesRouter } from '@/trpc/routers/categories/mongo.index'
 import { experienceRouter } from '@/trpc/routers/experience'
-import { groupsRouter } from '@/trpc/routers/groups'
-import { userRouter } from '@/trpc/routers/user'
+import { groupsRouter } from '@/trpc/routers/groups/mongo.index'
+import { userRouter } from '@/trpc/routers/user/mongo.index'
 import { inferRouterOutputs } from '@trpc/server'
 import { createTRPCRouter } from '../init'
 
