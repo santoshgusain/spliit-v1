@@ -41,3 +41,5 @@ next-env.d.ts
 postgres-data
 
 zmongo.data.json
+
+prisma/mongodb/client

@@ -1,5 +1,6 @@
 import { ExpenseFormValues, GroupFormValues } from '@/lib/schemas'
-import { PrismaClient, Prisma } from '../../prisma/mongodb/client'
+// import { PrismaClient, Prisma } from '../../prisma/mongodb/client'
+import { PrismaClient } from '.prisma/mongodb-client'
 import { ActivityType } from '@prisma/client'
 
 const mongoPrisma = new PrismaClient()
