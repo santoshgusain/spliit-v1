@@ -1,6 +1,7 @@
 // MongoDB schema optimized for document model
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
   output   = "../../node_modules/.prisma/mongodb-client"
 }
 
