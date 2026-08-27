@@ -43,3 +43,5 @@ postgres-data
 zmongo.data.json
 
 prisma/mongodb/client
+notes
+note.txt

@@ -1,6 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { SubmitButton } from '@/components/submit-button'
+import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
@@ -12,193 +14,342 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Save } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
-// export const metadata: Metadata = {
-//   title: 'Recently visited groups',
-// }
+const dateSchema = z.object({
+  startDate: z.date({
+    required_error: 'Start date is required',
+    invalid_type_error: 'Please select a valid date',
+  }),
 
-function getExp(experience: any) {
-  let totalDays = 0
+  endDate: z.date({
+    required_error: 'End date is required',
+    invalid_type_error: 'Please select a valid date',
+  }),
+})
 
-  experience.map((row: any) => {
-    const fromDate: any = new Date(row.joining)
-    const toDate: any = row.isWorking ? new Date() : new Date(row.leaving)
+type DateFormValues = z.infer<typeof dateSchema>
 
-    const days = Math.ceil((toDate - fromDate) / 1000 / 60 / 60 / 24)
+interface DateDifferenceResult {
+  years: number
+  months: number
+  days: number
+  totalDays: number
+  totalWeeks: number
+  totalHours: number
+  totalMinutes: number
+  totalSeconds: number
+  milliseconds: number
+  isNegative: boolean
+  startDate: Date
+  endDate: Date
+}
 
-    totalDays += days
+function formatDate(date: Date): string {
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
 
-    row.totalWorkingDays = days
-    return row
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function formatDisplayDate(date: Date): string {
+  return date.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
   })
+}
 
-  // 1000: ms to s;
-  // 1st 60: s to min;
-  // 2rd 60: min to hours;
-  // 24: hours to days;
-  const years = Math.floor(totalDays / 365)
+function parseDate(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number)
 
-  // 2y - 2.7y = 0.7;
-  // 0.7 * 12(month)
-  let months = Math.floor(Math.abs(years - totalDays / 365) * 12)
+  return new Date(year, month - 1, day)
+}
+
+function dateDifference(
+  startDate: Date,
+  endDate: Date,
+): DateDifferenceResult {
+  if (Number.isNaN(startDate.getTime())) {
+    throw new TypeError('startDate must be a valid Date')
+  }
+
+  if (Number.isNaN(endDate.getTime())) {
+    throw new TypeError('endDate must be a valid Date')
+  }
+
+  const isNegative = endDate < startDate
+
+  const start = isNegative ? endDate : startDate
+  const end = isNegative ? startDate : endDate
+
+  const milliseconds = end.getTime() - start.getTime()
+
+  const totalSeconds = Math.floor(milliseconds / 1000)
+  const totalMinutes = Math.floor(milliseconds / (1000 * 60))
+  const totalHours = Math.floor(milliseconds / (1000 * 60 * 60))
+  const totalDays = Math.floor(milliseconds / (1000 * 60 * 60 * 24))
+  const totalWeeks = Math.floor(totalDays / 7)
+
+  let years = end.getFullYear() - start.getFullYear()
+  let months = end.getMonth() - start.getMonth()
+  let days = end.getDate() - start.getDate()
+
+  if (days < 0) {
+    months--
+
+    const daysInPreviousMonth = new Date(
+      end.getFullYear(),
+      end.getMonth(),
+      0,
+    ).getDate()
+
+    days += daysInPreviousMonth
+  }
+
+  if (months < 0) {
+    years--
+    months += 12
+  }
 
   return {
-    days: totalDays,
-    years,
-    months,
-    experiences: experience,
+    years: isNegative ? -years : years,
+    months: isNegative ? -months : months,
+    days: isNegative ? -days : days,
+    totalDays: isNegative ? -totalDays : totalDays,
+    totalWeeks: isNegative ? -totalWeeks : totalWeeks,
+    totalHours: isNegative ? -totalHours : totalHours,
+    totalMinutes: isNegative ? -totalMinutes : totalMinutes,
+    totalSeconds: isNegative ? -totalSeconds : totalSeconds,
+    milliseconds: isNegative ? -milliseconds : milliseconds,
+    isNegative,
+    startDate: start,
+    endDate: end,
   }
 }
 
-function daysBetween(startDate: any, endDate: any) {
-  const millisecondsPerDay = 1000 * 60 * 60 * 24
-
-  const startDateUTC = Date.UTC(
-    startDate.getFullYear(),
-    startDate.getMonth(),
-    startDate.getDate(),
-  )
-  const endDateUTC = Date.UTC(
-    endDate.getFullYear(),
-    endDate.getMonth(),
-    endDate.getDate(),
-  )
-
-  return Math.floor((endDateUTC - startDateUTC) / millisecondsPerDay)
-}
-
-function formatDate(date?: Date) {
-  if (!date || isNaN(date as any)) date = new Date()
-  return date.toISOString().substring(0, 10)
-}
-
-const defaultValuesForm = {
+const defaultValues: DateFormValues = {
   startDate: new Date(),
   endDate: new Date(),
 }
 
-export const experienceSchema = z
-  .object({
-    startDate: z.date({
-      required_error: 'Start date is required',
-      invalid_type_error: 'Please select a valid date',
-    }),
-    endDate: z.date().optional().nullable(),
-  })
-  .passthrough()
+export default function DateDifferencePage() {
+  const [result, setResult] = useState<DateDifferenceResult | null>(null)
 
-export default function GroupsPage() {
-  const experience = [
-    {
-      company: 'gspann',
-      totalWorkingDays: 100,
-      joining: '2023-11-14',
-      leaving: '',
-      isWorking: true,
-    },
-    {
-      company: 'mobcoder',
-      totalWorkingDays: 100,
-      joining: '2023-01-19',
-      leaving: '2023-10-20',
-      isWorking: false,
-    },
-    {
-      company: 'mansa infotech',
-      totalWorkingDays: 100,
-      joining: '2021-08-02',
-      leaving: '2023-01-05',
-      isWorking: false,
-    },
-    {
-      company: 'Prolofic Technologies',
-      totalWorkingDays: 100,
-      joining: '2020-02-03',
-      leaving: '2021-06-29',
-      isWorking: false,
-    },
-  ]
-  const { days, months, years, experiences } = getExp(experience)
-
-  const form = useForm({
-    resolver: zodResolver(experienceSchema),
-    defaultValues: defaultValuesForm,
+  const form = useForm<DateFormValues>({
+    resolver: zodResolver(dateSchema),
+    defaultValues,
   })
+
+  const handleSubmit = (values: DateFormValues) => {
+    const difference = dateDifference(
+      values.startDate,
+      values.endDate,
+    )
+
+    setResult(difference)
+  }
+
+  const handleReset = () => {
+    form.reset(defaultValues)
+    setResult(null)
+  }
 
   return (
-    <>
-      <main className="flex-1 max-w-screen-md w-full mx-auto px-4 py-6 flex flex-col gap-6">
+    <main className="flex-1 w-full max-w-screen-md mx-auto px-4 py-6">
+      <div className="space-y-8">
         <div>
-          <h3>{'Add Experience'}</h3>
-          <br />
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(async (values: any) => {
-                const { editing, id } = values
-                console.log(editing, '=======================')
-              })}
-            >
-              <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem className="sm:order-1">
-                    <FormLabel>{'Start Date'}</FormLabel>
-                    <FormControl>
-                      <Input
-                        className="date-base"
-                        type="date"
-                        defaultValue={formatDate(field.value)}
-                        onChange={(event) => {
-                          return field.onChange(new Date(event.target.value))
-                        }}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {'Joining date of the employ'}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <h1 className="text-xl font-semibold">
+            Check Date Difference
+          </h1>
 
-              <FormField
-                control={form.control}
-                name="endDate"
-                render={({ field }) => (
-                  <FormItem className="sm:order-1">
-                    <FormLabel>{'End Date'}</FormLabel>
-                    <FormControl>
-                      <Input
-                        className="date-base"
-                        type="date"
-                        defaultValue={formatDate(field.value)}
-                        onChange={(event) => {
-                          return field.onChange(new Date(event.target.value))
-                        }}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {'Releaving date of the employ'}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex mt-4 gap-2">
-                <SubmitButton loadingContent={'saving'}>
-                  <Save className="w-4 h-4 mr-2" />
-                  {'Save'}
-                </SubmitButton>
-              </div>
-            </form>
-          </Form>
+          <p className="text-sm text-muted-foreground mt-1">
+            Calculate the difference between two dates.
+          </p>
         </div>
-      </main>
-    </>
+
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-6"
+          >
+            <FormField
+              control={form.control}
+              name="startDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Start Date</FormLabel>
+
+                  <FormControl>
+                    <Input
+                      type="date"
+                      className="date-base"
+                      value={formatDate(field.value)}
+                      onChange={(event) => {
+                        field.onChange(
+                          parseDate(event.target.value),
+                        )
+                      }}
+                    />
+                  </FormControl>
+
+                  <FormDescription>
+                    Joining date of the employee
+                  </FormDescription>
+
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="endDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>End Date</FormLabel>
+
+                  <FormControl>
+                    <Input
+                      type="date"
+                      className="date-base"
+                      value={formatDate(field.value)}
+                      onChange={(event) => {
+                        field.onChange(
+                          parseDate(event.target.value),
+                        )
+                      }}
+                    />
+                  </FormControl>
+
+                  <FormDescription>
+                    Relieving date of the employee
+                  </FormDescription>
+
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex gap-2">
+              <SubmitButton loadingContent="Checking..">
+                Check
+              </SubmitButton>
+
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleReset}
+              >
+                Reset
+              </Button>
+            </div>
+          </form>
+        </Form>
+
+        {result && (
+          <section className="rounded-xl border bg-card p-6 space-y-6">
+            <div className="text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Date Difference
+              </p>
+
+              <div className="text-3xl font-bold tracking-tight">
+                {Math.abs(result.years)}{' '}
+                {Math.abs(result.years) === 1 ? 'Year' : 'Years'}{' '}
+                {Math.abs(result.months)}{' '}
+                {Math.abs(result.months) === 1 ? 'Month' : 'Months'}{' '}
+                {Math.abs(result.days)}{' '}
+                {Math.abs(result.days) === 1 ? 'Day' : 'Days'}
+              </div>
+
+              {result.isNegative && (
+                <p className="text-sm text-destructive">
+                  End date is earlier than start date
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-center gap-4 text-sm text-muted-foreground">
+              <div className="text-center">
+                <p className="font-medium text-foreground">
+                  {formatDisplayDate(result.startDate)}
+                </p>
+                <p>Start Date</p>
+              </div>
+
+              <div className="hidden sm:flex items-center">
+                →
+              </div>
+
+              <div className="text-center">
+                <p className="font-medium text-foreground">
+                  {formatDisplayDate(result.endDate)}
+                </p>
+                <p>End Date</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <ResultItem
+                label="Total Days"
+                value={result.totalDays}
+              />
+
+              <ResultItem
+                label="Total Weeks"
+                value={result.totalWeeks}
+              />
+
+              <ResultItem
+                label="Total Hours"
+                value={result.totalHours}
+              />
+
+              <ResultItem
+                label="Total Minutes"
+                value={result.totalMinutes}
+              />
+
+              <ResultItem
+                label="Total Seconds"
+                value={result.totalSeconds}
+              />
+
+              <ResultItem
+                label="Milliseconds"
+                value={result.milliseconds}
+              />
+            </div>
+          </section>
+        )}
+      </div>
+    </main>
+  )
+}
+
+function ResultItem({
+  label,
+  value,
+}: {
+  label: string
+  value: number
+}) {
+  return (
+    <div className="rounded-lg border bg-muted/30 p-4 text-center">
+      <p className="text-lg font-semibold">
+        {value.toLocaleString('en-IN')}
+      </p>
+
+      <p className="text-xs text-muted-foreground mt-1">
+        {label}
+      </p>
+    </div>
   )
 }

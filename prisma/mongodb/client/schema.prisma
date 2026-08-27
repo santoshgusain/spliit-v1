@@ -1,6 +1,7 @@
 // MongoDB schema optimized for document model
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
   output   = "./client"
 }
 
@@ -34,9 +35,9 @@ model Group {
   name         String
   information  String?
   currency     String   @default("$")
-  participants Json[]   // Embedded array of participants
-  expenses     Json[]   // Embedded array of expenses with their details
-  activities   Json[]   // Embedded array of activities
+  participants Json[]   @default([]) // Embedded array of participants
+  expenses     Json[]   @default([]) // Embedded array of expenses with their details
+  activities   Json[]   @default([]) // Embedded array of activities
   createdAt    DateTime @default(now())
 }
 
@@ -58,4 +59,5 @@ enum ActivityType {
   UPDATE_GROUP
   CREATE_EXPENSE
   UPDATE_EXPENSE
+  DELETE_EXPENSE
 }
