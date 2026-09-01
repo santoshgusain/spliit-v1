@@ -46,7 +46,13 @@ export async function mongoUpdateExperience(data: any) {
 }
 
 export async function mongoListExperience() {
-  const user = await mongoPrisma.experience.findMany()
+  const user = await mongoPrisma.experience.findMany(
+    {
+    orderBy: {
+      joining: 'desc',
+    },
+  }
+  )
   return user
 }
 
